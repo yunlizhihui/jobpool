@@ -1,0 +1,22 @@
+FROM registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:base-img.x86
+
+ADD jobpool.sh /usr/local/bin/
+ADD jobpool /usr/local/bin/
+ADD jobpoolctl /usr/local/bin/
+
+WORKDIR /var/jobpool/
+WORKDIR /var/lib/jobpool/
+
+RUN chmod +x /usr/local/bin/jobpool.sh
+RUN chmod +x /usr/local/bin/jobpool
+RUN chmod +x /usr/local/bin/jobpoolctl
+
+# timezone
+ENV TZ=Asia/Shanghai
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo 'Asia/Shanghai' >/etc/timezone
+
+EXPOSE 2379 2380
+
+# Define default command.
+CMD ["/usr/local/bin/jobpool.sh"]

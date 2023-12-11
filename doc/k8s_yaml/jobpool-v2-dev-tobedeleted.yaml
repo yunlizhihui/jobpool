@@ -1,0 +1,178 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  namespace: jobpoolv2
+  name: aliyun
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5jbi1iZWlqaW5nLmFsaXl1bmNzLmNvbSI6eyJ1c2VybmFtZSI6InpoZW5nd2VpQDEyODA4MzY4MTUyMjg4NDYiLCJwYXNzd29yZCI6InpoZW5nd2VpMTIzIiwiYXV0aCI6ImVtaGxibWQzWldsQU1USTRNRGd6TmpneE5USXlPRGcwTmpwNmFHVnVaM2RsYVRFeU13PT0ifX19
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobpool-v2
+  namespace: jobpoolv2
+  labels:
+    app: jobpool-v2
+spec:
+  clusterIP: None
+  ports:
+    - port: 2380
+      name: peer
+    - port: 2379
+      name: client
+  selector:
+    app: jobpool-v2
+  publishNotReadyAddresses: true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: jobpool-v2
+  name: jobpool-v2
+  namespace: jobpoolv2
+spec:
+  replicas: 3
+  serviceName: jobpool-v2
+  selector:
+    matchLabels:
+      app: jobpool-v2
+  template:
+    metadata:
+      labels:
+        app: jobpool-v2
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: jobpoolv2 #node节点的标签
+                    operator: In
+                    values:
+                      - serverv2
+      volumes:
+        - name: local-data-dir
+          hostPath:
+            path: /data/jobpool-v2-develop
+      containers:
+        - name: jobpool-v2
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:2.0.0-SNAPSHOT.x86_64
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "100Mi"
+              cpu: "0.25"
+          ports:
+            - containerPort: 2380
+              name: peer
+              protocol: TCP
+            - containerPort: 2379
+              name: client
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ETCD_NAME
+              value: "$(POD_NAME)"
+            - name: ETCD_LOG_LEVEL
+              value: info
+            - name: ETCD_ON_K8S
+              value: 'yes'
+            - name: ETCD_START_FROM_SNAPSHOT
+              value: 'no'
+            - name: ETCD_ADVERTISE_CLIENT_URLS
+              value: "http://jobpool-v2.$(NAMESPACE).svc.cluster.local:2379"
+            - name: ETCD_LISTEN_CLIENT_URLS
+              value: "http://0.0.0.0:2379"
+            - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
+              value: "http://jobpool-v2.$(NAMESPACE).svc.cluster.local:2380"
+            - name: ETCD_LISTEN_PEER_URLS
+              value: "http://0.0.0.0:2380"
+            - name: ETCD_INITIAL_CLUSTER
+              value: "jobpool-v2-0=http://jobpool-v2-0.jobpool-v2.$(NAMESPACE).svc.cluster.local:2380,jobpool-v2-1=http://jobpool-v2-1.jobpool-v2.$(NAMESPACE).svc.cluster.local:2380,jobpool-v2-2=http://jobpool-v2-2.jobpool-v2.$(NAMESPACE).svc.cluster.local:2380"
+            - name: ETCD_INITIAL_CLUSTER_TOKEN
+              value: "jobpool-v2-k8s"
+            - name: ETCD_INITIAL_CLUSTER_STATE
+              value: "new"
+            - name: ALLOW_NONE_AUTHENTICATION
+              value: 'yes'
+            - name: ETCD_CLUSTER_DOMAIN
+              value: jobpool-v2.$(NAMESPACE).svc.cluster.local
+          volumeMounts:
+          - name: local-data-dir
+            mountPath: /var/lib/etcd
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: jobpoolv2
+  name: jobpool-cluster-service
+spec:
+  ports:
+    - nodePort: 30088
+      port: 2379
+      protocol: TCP
+      targetPort: 2379
+  selector:
+    app: jobpool-v2
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: jobpoolv2
+  name: "jobpool-client"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: "jobpool-client"
+  template:
+    metadata:
+      labels:
+        app: "jobpool-client"
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      containers:
+        - name: "jobpool-engine-client"
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-client-v2:2.0.0-SNAPSHOT.x86_64
+          imagePullPolicy: Always
+          args:
+            - "jobpool_agent"
+            - "agent"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: JOBPOOL_NAME
+              value: "$(POD_NAME)"
+            - name: JOBPOOL_ADVERTISE_SERVER_URLS
+              value: "http://jobpool-v2-0.jobpool-v2.$(NAMESPACE).svc.cluster.local:2379,http://jobpool-v2-1.jobpool-v2.$(NAMESPACE).svc.cluster.local:2379,http://jobpool-v2-2.jobpool-v2.$(NAMESPACE).svc.cluster.local:2379"
+            - name: JOBPOOL_DATA_DIR
+              value: "/var/jobpool"

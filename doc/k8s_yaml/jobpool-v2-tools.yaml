@@ -1,0 +1,47 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  namespace: jobpoolv2
+  name: "jobpool-tools-deployment"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "jobpool-tools"
+  template:
+    metadata:
+      labels:
+        app: "jobpool-tools"
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      containers:
+        - name: "jobpool-tools-v1"
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/bootstrap-jobpool-tools:1.0.0-SNAPSHOT.x86_64
+          imagePullPolicy: Always
+          env:
+            - name: "JAVA_OPTS"
+              value: "-Xmx2048m -Dserver.port=8080 -Djobpool.report-enabled=true -Djobpool.job-status-report=http://jobpool-handless:2379/v3/schedule/jobs/{id}/status"
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              memory: 2156Mi
+            requests:
+              memory: 1024Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: jobpoolv2
+  name: jobpool-tools-outer-service
+spec:
+  ports:
+    - nodePort: 30089
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: jobpool-tools
+  sessionAffinity: None
+  type: NodePort

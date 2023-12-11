@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  namespace: etcd357
+  name: aliyun
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5jbi1iZWlqaW5nLmFsaXl1bmNzLmNvbSI6eyJ1c2VybmFtZSI6InpoZW5nd2VpQDEyODA4MzY4MTUyMjg4NDYiLCJwYXNzd29yZCI6InpoZW5nd2VpMTIzIiwiYXV0aCI6ImVtaGxibWQzWldsQU1USTRNRGd6TmpneE5USXlPRGcwTmpwNmFHVnVaM2RsYVRFeU13PT0ifX19
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobpool-handless
+  namespace: etcd357
+  labels:
+    app: jobpool2
+spec:
+  clusterIP: None
+  ports:
+    - port: 2380
+      name: peer
+    - port: 2379
+      name: client
+    - port: 4001
+      name: client2
+  selector:
+    app: jobpool2
+  publishNotReadyAddresses: true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: jobpool2
+  name: jobpool2
+  namespace: etcd357
+spec:
+  replicas: 3
+  serviceName: jobpool-handless
+  selector:
+    matchLabels:
+      app: jobpool2
+  template:
+    metadata:
+      labels:
+        app: jobpool2
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: jobpoolv2 #node节点的标签
+                    operator: In
+                    values:
+                      - serverv2
+      containers:
+        - name: jobpool2
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/etcd:3.5.7
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "100Mi"
+              cpu: "0.25"
+          ports:
+            - containerPort: 4001
+            - containerPort: 2380
+            - containerPort: 2379
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CLUSTER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: SERVICE_NAME
+              value: "jobpool-handless"
+            - name: INITIAL_CLUSTER
+              value: "jobpool2-0=http://jobpool2-0.jobpool-handless.etcd357.svc.cluster.local:2380,jobpool2-1=http://jobpool2-1.jobpool-handless.etcd357.svc.cluster.local:2380,jobpool2-2=http://jobpool2-2.jobpool-handless.etcd357.svc.cluster.local:2380"
+            - name: ETCD_INITIAL_CLUSTER_TOKEN
+              value: "jobpool2-0"
+            - name: ETCD_INITIAL_CLUSTER_STATE
+              value: "new"
+            - name: ETCD_EXPERIMENTAL_WARNING_APPLY_DURATION
+              value: "500ms"
+          volumeMounts:
+            - name: datadir
+              mountPath: /var/lib/etcd
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: local-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: etcd357
+  name: jobpool-cluster-service
+spec:
+  ports:
+    - nodePort: 30098
+      port: 2379
+      protocol: TCP
+      targetPort: 2379
+  selector:
+    app: jobpool2
+  sessionAffinity: None
+  type: NodePort

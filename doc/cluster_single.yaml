@@ -1,0 +1,38 @@
+#########################################################
+######  请根据各节点实际情况修改配置：1/3/4/5/6/7  ######
+#########################################################
+#[Member]
+#1.节点名称，必须唯一
+name: "jobpool01"
+
+#2.设置数据保存的目录
+data-dir: "/tmp/jobpool-single"
+
+#3.用于监听其他etcd member的url
+listen-peer-urls: "http://127.0.0.1:2380"
+
+#4.该节点对外提供服务的地址
+listen-client-urls: "http://127.0.0.1:2379"
+
+#[Clustering]
+#5.对外公告的该节点客户端监听地址
+advertise-client-urls: "http://127.0.0.1:2379"
+
+#6.该节点成员对等URL地址，且会通告群集的其余成员节点
+initial-advertise-peer-urls: "http://127.0.0.1:2380"
+
+#7.集群中所有节点的信息
+initial-cluster: "jobpool01=http://127.0.0.1:2380"
+
+#8.创建集群的token，这个值每个集群保持唯一
+ETCD_INITIAL_CLUSTER_TOKEN: jobpool-cluster
+
+#9.初始集群状态，新建集群的时候，这个值为new；
+ETCD_INITIAL_CLUSTER_STATE: new
+
+#11.scheduler
+worker-number: 3
+
+experimental-warning-apply-duration: 500000000
+
+job-parallelism-limit: 500

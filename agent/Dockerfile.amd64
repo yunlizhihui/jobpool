@@ -1,0 +1,13 @@
+FROM registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:base-agent-img.x86
+
+ADD jobpool_agent /usr/local/bin/
+ADD jobpoolctl /usr/local/bin/
+
+WORKDIR /var/jobpool/
+WORKDIR /var/lib/jobpool/
+WORKDIR /etc/jobpool/
+
+RUN chmod +x /usr/local/bin/jobpool_agent
+RUN chmod +x /usr/local/bin/jobpoolctl
+
+CMD ["/usr/local/bin/jobpool_agent"]

@@ -1,0 +1,133 @@
+syntax = "proto3";
+package etcdserverpb;
+
+import "gogoproto/gogo.proto";
+import "etcdserver.proto";
+import "rpc.proto";
+import "jobpool/api/membershippb/membership.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+message RequestHeader {
+  uint64 ID = 1;
+  // username is a username that is associated with an auth token of gRPC connection
+  string username = 2;
+  // auth_revision is a revision number of auth.authStore. It is not related to mvcc
+  uint64 auth_revision = 3;
+}
+
+// An InternalRaftRequest is the union of all requests which can be
+// sent via raft.
+message InternalRaftRequest {
+  RequestHeader header = 100;
+  uint64 ID = 1;
+
+  Request v2 = 2;
+
+  RangeRequest range = 3;
+  PutRequest put = 4;
+  DeleteRangeRequest delete_range = 5;
+  TxnRequest txn = 6;
+  CompactionRequest compaction = 7;
+
+  LeaseGrantRequest lease_grant = 8;
+  LeaseRevokeRequest lease_revoke = 9;
+
+  AlarmRequest alarm = 10;
+
+  LeaseCheckpointRequest lease_checkpoint = 11;
+
+  AuthEnableRequest auth_enable = 1000;
+  AuthDisableRequest auth_disable = 1011;
+  AuthStatusRequest auth_status = 1013;
+
+  InternalAuthenticateRequest authenticate = 1012;
+
+  AuthUserAddRequest auth_user_add = 1100;
+  AuthUserDeleteRequest auth_user_delete = 1101;
+  AuthUserGetRequest auth_user_get = 1102;
+  AuthUserChangePasswordRequest auth_user_change_password = 1103;
+  AuthUserGrantRoleRequest auth_user_grant_role = 1104;
+  AuthUserRevokeRoleRequest auth_user_revoke_role = 1105;
+  AuthUserListRequest auth_user_list = 1106;
+  AuthRoleListRequest auth_role_list = 1107;
+
+  AuthRoleAddRequest auth_role_add = 1200;
+  AuthRoleDeleteRequest auth_role_delete = 1201;
+  AuthRoleGetRequest auth_role_get = 1202;
+  AuthRoleGrantPermissionRequest auth_role_grant_permission = 1203;
+  AuthRoleRevokePermissionRequest auth_role_revoke_permission = 1204;
+
+  membershippb.ClusterVersionSetRequest cluster_version_set = 1300;
+  membershippb.ClusterMemberAttrSetRequest cluster_member_attr_set = 1301;
+  membershippb.DowngradeInfoSetRequest  downgrade_info_set = 1302;
+
+  // schedule after 1400
+  SchedulePlanListRequest schedule_plan_list = 1400;
+  SchedulePlanAddRequest schedule_plan_add = 1401;
+  SchedulePlanUpdateRequest schedule_plan_update = 1402;
+  SchedulePlanDeleteRequest schedule_plan_delete = 1403;
+  SchedulePlanDetailRequest schedule_plan_detail = 1404;
+  SchedulePlanOnlineRequest schedule_plan_online = 1405;
+  SchedulePlanOfflineRequest schedule_plan_offline = 1406;
+  // job
+  ScheduleJobAddRequest schedule_job_add = 1411;
+  ScheduleJobListRequest schedule_job_list = 1412;
+  ScheduleJobStatusUpdateRequest schedule_job_status_update = 1413;
+  ScheduleJobDeleteRequest schedule_job_delete = 1414;
+  ScheduleJobDetailRequest schedule_job_detail = 1415;
+  ScheduleJobExistRequest schedule_job_exist = 1416;
+  // eval
+  ScheduleEvalAddRequest schedule_eval_add = 1420;
+  ScheduleEvalListRequest schedule_eval_list = 1421;
+  ScheduleEvalStatusUpdateRequest schedule_eval_status_update = 1422;
+  ScheduleEvalDeleteRequest schedule_eval_delete = 1423;
+  ScheduleEvalDetailRequest schedule_eval_detail = 1424;
+  // alloc
+  ScheduleAllocationAddRequest schedule_allocation_add = 1430;
+  ScheduleAllocationListRequest schedule_allocation_list = 1431;
+  ScheduleAllocationStatusUpdateRequest schedule_allocation_status_update = 1432;
+  ScheduleAllocationDeleteRequest schedule_allocation_delete = 1433;
+  ScheduleAllocationDetailRequest schedule_allocation_detail = 1434;
+  ScheduleAllocationListRequest schedule_simple_allocation_list = 1435;
+  // plan alloc
+  PlanAllocationEnqueueRequest plan_allocation_enqueue = 1436;
+
+  // eval queue
+  ScheduleEvalDequeueRequest schedule_eval_dequeue = 1440;
+  ScheduleEvalAckRequest schedule_eval_ack = 1441;
+  ScheduleEvalNackRequest schedule_eval_nack = 1442;
+
+  // namespace
+  ScheduleNameSpaceAddRequest schedule_namespace_add = 1450;
+  ScheduleNameSpaceListRequest schedule_namespace_list = 1451;
+  ScheduleNameSpaceDeleteRequest schedule_namespace_delete = 1452;
+  ScheduleNameSpaceDetailRequest schedule_namespace_detail = 1453;
+  ScheduleNameSpaceUpdateRequest schedule_namespace_update = 1454;
+
+  // node
+  NodeAddRequest node_add = 1500;
+  NodeListRequest node_list = 1501;
+  NodeUpdateRequest node_update = 1502;
+  NodeDeleteRequest node_delete = 1503;
+  NodeDetailRequest node_detail = 1504;
+
+
+}
+
+message EmptyResponse {
+}
+
+// What is the difference between AuthenticateRequest (defined in rpc.proto) and InternalAuthenticateRequest?
+// InternalAuthenticateRequest has a member that is filled by etcdserver and shouldn't be user-facing.
+// For avoiding misusage the field, we have an internal version of AuthenticateRequest.
+message InternalAuthenticateRequest {
+  string name = 1;
+  string password = 2;
+
+  // simple_token is generated in API layer (etcdserver/v3_server.go)
+  string simple_token = 3;
+}

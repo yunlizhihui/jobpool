@@ -1,0 +1,403 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  namespace: jp2
+  name: aliyun
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5jbi1iZWlqaW5nLmFsaXl1bmNzLmNvbSI6eyJ1c2VybmFtZSI6InpoZW5nd2VpQDEyODA4MzY4MTUyMjg4NDYiLCJwYXNzd29yZCI6InpoZW5nd2VpMTIzIiwiYXV0aCI6ImVtaGxibWQzWldsQU1USTRNRGd6TmpneE5USXlPRGcwTmpwNmFHVnVaM2RsYVRFeU13PT0ifX19
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jobpool-pv-1
+  namespace: jp2
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage
+  local:
+    path: /data/jobpool-jp2
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                -  k8s-worker1
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jobpool-pv-2
+  namespace: jp2
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage
+  local:
+    path: /data/jobpool-jp2
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                -  k8s-worker2
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jobpool-pv-3
+  namespace: jp2
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local-storage
+  local:
+    path: /data/jobpool-jp2
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                -  k8s-worker3
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+  namespace: jp2
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jobpool-handless
+  namespace: jp2
+  labels:
+    app: jobpool2
+spec:
+  clusterIP: None
+  ports:
+    - port: 2380
+      name: peer
+    - port: 2379
+      name: client
+  selector:
+    app: jobpool2
+  publishNotReadyAddresses: true
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: jobpool2
+  name: jobpool2
+  namespace: jp2
+spec:
+  replicas: 3
+  serviceName: jobpool-handless
+  selector:
+    matchLabels:
+      app: jobpool2
+  template:
+    metadata:
+      labels:
+        app: jobpool2
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      containers:
+        - name: jobpool2
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:GA-2.0.0.x86_64
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "800Mi"
+            requests:
+              memory: "128Mi"
+          ports:
+            - containerPort: 2380
+            - containerPort: 2379
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CLUSTER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: ETCD_LOG_LEVEL
+              value: "info"
+            - name: SERVICE_NAME
+              value: "jobpool-handless"
+            - name: INITIAL_CLUSTER
+              value: "jobpool2-0=http://jobpool2-0.jobpool-handless.jp2.svc.cluster.local:2380,jobpool2-1=http://jobpool2-1.jobpool-handless.jp2.svc.cluster.local:2380,jobpool2-2=http://jobpool2-2.jobpool-handless.jp2.svc.cluster.local:2380"
+            - name: ETCD_INITIAL_CLUSTER_TOKEN
+              value: "jobpool2-0"
+            - name: ETCD_INITIAL_CLUSTER_STATE
+              value: "new"
+            - name: ETCD_EXPERIMENTAL_WARNING_APPLY_DURATION
+              value: "500ms"
+            - name: ETCD_JOB_PARALLELISM_LIMIT
+              value: "500"
+          volumeMounts:
+            - name: datadir
+              mountPath: /home/jobpool
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: local-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: jp2
+  name: jobpool-cluster-service
+spec:
+  ports:
+    - port: 2379
+      protocol: TCP
+      targetPort: 2379
+  selector:
+    app: jobpool2
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: jp2
+  name: "jobpool-client"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: "jobpool-client"
+  template:
+    metadata:
+      labels:
+        app: "jobpool-client"
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      containers:
+        - name: "jobpool-engine-client"
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-client-v2:GA-2.0.0.x86_64
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "800Mi"
+            requests:
+              memory: "128Mi"
+          args:
+            - "jobpool_agent"
+            - "agent"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: JOBPOOL_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: JOBPOOL_ADVERTISE_SERVER_URLS
+              value: "http://jobpool-handless:2379"
+            - name: JOBPOOL_DATA_DIR
+              value: "/var/jobpool"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: jp2
+  name: nginx-conf
+data:
+  nginx.conf: |
+    user  root;
+    worker_processes  1;
+
+    #error_log  logs/error.log;
+    #error_log  logs/error.log  notice;
+    #error_log  logs/error.log  info;
+
+    #pid        logs/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        # 隐藏版本信息
+        server_tokens off;
+        include       mime.types;
+        default_type  application/octet-stream;
+
+        #access_log  logs/access.log main;
+
+        sendfile        on;
+        #tcp_nopush     on;
+
+        #keepalive_timeout 0;
+        keepalive_timeout 120s;
+        client_header_timeout 120s;
+        client_body_timeout 120s;
+        client_max_body_size 1024m;
+
+        map $http_upgrade $connection_upgrade {
+            default upgrade;
+            '' close;
+        }
+
+        gzip on;
+        gzip_min_length 1000;
+        gzip_buffers 4 8k;
+        gzip_types text/plain application/x-javascript text/css application/json application/xml text/javascript application/javascript;
+
+        server {
+            listen  8080;
+            server_name  localhost;
+
+            #charset koi8-r;
+            set $jobpool_upstream http://jobpool-handless.jp2:2379;
+
+            location / {
+                add_header Access-Control-Allow-Origin  *;
+                add_header Access-Control-Allow-Headers X-Requested-With;
+                add_header Access-Control-Allow-Methods GET,POST,PUT,DELETE,PATCH,OPTIONS;
+
+                root   html;
+                index  index.html index.htm;
+            }
+
+            error_page   500 502 503 504  /50x.html;
+            location = /50x.html {
+                root   html;
+            }
+    
+            location /v3 {
+                resolver 127.0.0.1:53 ipv6=off valid=10s;
+                proxy_pass  $jobpool_upstream;
+                proxy_http_version 1.1;
+            }
+    
+            location /pdf/ {
+                valid_referers server_names ~.;
+                if ($invalid_referer) {
+                    #盗链时返回404
+                    return 404;
+                }
+            }
+        }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: jp2
+  annotations:
+    deployment.kubernetes.io/revision: '1'
+  generation: 1
+  labels:
+    app: nginx-service-deployment
+  name: nginx-service-deployment
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: nginx-service-deployment
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: nginx-service-deployment
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      containers:
+        - name: nginx-service-deployment
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-nginx:GA-2.0.0.x86_64
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: 320Mi
+            requests:
+              memory: 128Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /etc/nginx/nginx.conf
+              name: nginx-conf
+              subPath: nginx.conf
+        - name: dnsmasq
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/go-dnsmasq:1.0.7.x86_64
+          args:
+            - --listen
+            - "127.0.0.1:53"
+            - --default-resolver
+            - --append-search-domains
+      volumes:
+        - configMap:
+            name: nginx-conf
+          name: nginx-conf
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: jp2
+  name: nginx-service
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: nginx-service-deployment
+  sessionAffinity: None
+  type: ClusterIP

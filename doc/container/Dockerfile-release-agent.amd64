@@ -1,0 +1,4 @@
+FROM --platform=linux/amd64 ubuntu:18.04
+
+WORKDIR /var/jobpool/
+WORKDIR /var/lib/jobpool/

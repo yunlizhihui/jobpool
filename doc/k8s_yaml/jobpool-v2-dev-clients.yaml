@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: jobpoolv2
+  name: "jobpool-client"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: "jobpool-client"
+  template:
+    metadata:
+      labels:
+        app: "jobpool-client"
+    spec:
+      imagePullSecrets:
+        - name: aliyun
+      containers:
+        - name: "jobpool-engine-client"
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-client-v2:2.0.1-SNAPSHOT.x86_64
+          imagePullPolicy: Always
+          resources:
+            limits:
+              memory: "800Mi"
+            requests:
+              memory: "128Mi"
+          args:
+            - "jobpool_agent"
+            - "agent"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: JOBPOOL_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: JOBPOOL_ADVERTISE_SERVER_URLS
+              value: "http://jobpool-handless:2379"
+            - name: JOBPOOL_DATA_DIR
+              value: "/var/jobpool"

@@ -1,0 +1,104 @@
+syntax = "proto3";
+package schedulepb;
+
+import "google/protobuf/timestamp.proto";
+import "gogoproto/gogo.proto";
+
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.goproto_enum_prefix_all) = false;
+
+message PeriodicConfig {
+  bool enabled = 1;
+  string spec = 2;
+  string time_zone = 3;
+  google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp end_time = 5;
+  bool prohibit_overlap = 6;
+};
+
+// User is a single entry in the bucket authUsers
+message Plan {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string namespace = 4;
+  uint64 priority = 5;
+  bool stop = 6;
+  bool synchronous = 7;
+  string status = 8;
+  string description = 9;
+  string parameters = 10;
+  PeriodicConfig periodic = 11;
+  google.protobuf.Timestamp launch_time = 12;
+  google.protobuf.Timestamp create_time = 13;
+  google.protobuf.Timestamp update_time = 14;
+}
+
+message NameSpace {
+  string name = 1;
+}
+
+message Job {
+  string id = 1;
+  string plan_id = 2;
+  string derived_plan_id = 3;
+  string name = 4;
+  string type = 5;
+  string namespace = 6;
+  string operatorId = 7;
+  uint64 timeout = 8;
+  string status = 9;
+  string parameters = 10;
+  string info = 11;
+  google.protobuf.Timestamp create_time = 12;
+  google.protobuf.Timestamp update_time = 13;
+}
+
+message Evaluation {
+  string id = 1;
+  string namespace = 2;
+  uint64 priority = 3;
+  string type = 4;
+  string triggered_by = 5;
+  string plan_id = 6;
+  string job_id = 7;
+  string node_id = 8;
+  string status = 9;
+  string status_description = 10;
+  string next_eval = 11;
+  string previous_eval = 12;
+  string blocked_eval = 13;
+  google.protobuf.Timestamp create_time = 14;
+  google.protobuf.Timestamp update_time = 15;
+}
+
+message Allocation {
+  string id = 1;
+  string name = 2;
+  string namespace = 3;
+  string eval_id = 4;
+  string node_id = 5;
+  string client_description = 6;
+  string plan_id = 7;
+  string job_id = 8;
+  string client_status = 9;
+  string next_allocation = 10;
+  string desired_status = 11;
+  string desired_description = 12;
+  google.protobuf.Timestamp create_time = 13;
+  google.protobuf.Timestamp update_time = 14;
+}
+
+message SimpleAllocation {
+  string id = 1;
+}
+
+message Launch {
+  string id = 1;
+  string namespace = 2;
+  google.protobuf.Timestamp launch = 3;
+}
