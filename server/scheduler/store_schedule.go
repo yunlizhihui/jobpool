@@ -1472,14 +1472,16 @@ func (as *scheduleStore) AllocationUpdate(r *pb.ScheduleAllocationStatusUpdateRe
 	}
 	if jobId != "" && needUpdateJob {
 		job := getJob(as.lg, tx, jobId)
-		job.Status = status
-		if constant.JobStatusComplete == status {
-			job.Info = ""
-		} else {
-			job.Info = description
+		if job != nil {
+			job.Status = status
+			if constant.JobStatusComplete == status {
+				job.Info = ""
+			} else {
+				job.Info = description
+			}
+			job.UpdateTime = now
+			putJob(as.lg, tx, job)
 		}
-		job.UpdateTime = now
-		putJob(as.lg, tx, job)
 	}
 	// update other allocations
 	if constant.AllocClientStatusFailed == r.Status {
