@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"sigs.k8s.io/yaml"
 	"yunli.com/jobpool/agent/v2/config"
+	"yunli.com/jobpool/api/v2/constant"
 	"yunli.com/jobpool/api/v2/version"
 	"yunli.com/jobpool/pkg/v2/flags"
 	flagsUtil "yunli.com/jobpool/pkg/v2/flags"
@@ -82,7 +83,7 @@ func (c *cfg) parse(arguments []string) error {
 	}
 	var err error
 	if c.configFile == "" {
-		c.configFile = os.Getenv(flags.FlagToEnv("JOBPOOL", "config-file"))
+		c.configFile = os.Getenv(flags.FlagToEnv(constant.JOBPOOL, "config-file"))
 	}
 
 	if c.configFile != "" {
@@ -110,7 +111,7 @@ func (c *cfg) configFromFile(path string) error {
 }
 
 func (c *cfg) configFromCmdLine() error {
-	err := flagsUtil.SetFlagsFromEnv(c.logger, "JOBPOOL", c.cf.flagSet)
+	err := flagsUtil.SetFlagsFromEnv(c.logger, constant.JOBPOOL, c.cf.flagSet)
 	if err != nil {
 		return err
 	}

@@ -71,7 +71,6 @@ func (s *EtcdServer) RunningChildren(plan *domain.Plan) (bool, error) {
 
 // schedulePeriodic is used to do periodic plan dispatch while we are leader
 func (s *EtcdServer) schedulePeriodic(stopCh chan struct{}) {
-	// TODO 重启后会出一大堆无法apply的日志，暂时去掉，使用etcd自身的wal副本保留个数的机制，看是否可以
 	// TODO from config
 	jobGC := time.NewTicker(1 * time.Hour)
 	defer jobGC.Stop()

@@ -15,6 +15,7 @@ package constant
 const (
 	// ProductName 产品名称，统一定义
 	ProductName = "jobpoolV2"
+	JOBPOOL     = "JOBPOOL"
 )
 
 const (
