@@ -85,10 +85,7 @@ func (p *allocator) planApply(stopCh chan struct{}) {
 					continue
 				}
 			}
-		*/
-		p.logger.Debug("dequeue from allocationQueue---", zap.Reflect("pending", pending))
-
-		// Evaluate the plan
+		*/ // Evaluate the plan
 		result, err := p.evaluatePlan(pool, pending.PlanAllocation, p.logger)
 		if err != nil {
 			p.logger.Error("failed to evaluate plan", zap.Error(err))
@@ -422,8 +419,6 @@ func (p *allocator) applyPlanAllocation(planAlloc *domain.PlanAlloc, result *dom
 		}
 		planReq.AllocationPreempted = allocations
 	}
-	p.logger.Debug("---start apply the plan allocation in server----")
-	p.logger.Debug("the plan allocation request", zap.Reflect("request", planReq))
 	// Dispatch the Raft transaction
 	_, err := p.EtcdServer.AllocationAdd(p.ctx, planReq)
 	if err != nil {

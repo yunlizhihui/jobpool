@@ -47,7 +47,6 @@ func NewCoreScheduler(server *EtcdServer, logger *zap.Logger) scheduler.Schedule
 }
 
 func (c *CoreScheduler) Process(evaluation *domain.Evaluation) error {
-	c.logger.Debug("----start process the core scheduler", zap.String("eval", evaluation.ID))
 	switch evaluation.JobID {
 	case constant.CoreJobEvalGC:
 		return c.evalGC()
@@ -77,7 +76,6 @@ OUTER:
 		}
 		node := domain.ConvertNodeFromPb(pbNode)
 		tenMinuteAgo := time.Now().Add(-10 * time.Minute)
-		c.logger.Debug("the node status in gc", zap.Reflect("node", node), zap.Int64("ten-ago", tenMinuteAgo.UnixMicro()))
 		if !node.TerminalStatus() || node.StatusUpdatedAt > tenMinuteAgo.UnixMicro() {
 			continue
 		}
@@ -145,10 +143,6 @@ func (c *CoreScheduler) evalGC() error {
 	var gcAlloc, gcEval []string
 	for _, evaluation := range resp.Data {
 		evalDomain := domain.ConvertEvaluationFromPb(evaluation)
-		c.logger.Debug("--the eval to be delete--",
-			zap.String("eval-id", evaluation.Id),
-			zap.String("status", evaluation.Status),
-			zap.String("ctm", evaluation.CreateTime.String()))
 		if evalDomain.TerminalStatus() {
 			// delete it!
 			allowEvalGc, allocs, err := c.evalGCInternal(evalDomain, endTime)
@@ -164,12 +158,6 @@ func (c *CoreScheduler) evalGC() error {
 	if len(gcEval) == 0 && len(gcAlloc) == 0 {
 		return nil
 	}
-	c.logger.Debug("eval GC found eligibile objects",
-		zap.Int("evals", len(gcEval)),
-		zap.Int("allocs", len(gcAlloc)),
-		zap.Strings("eval-ids", gcEval),
-		zap.Strings("alloc-ids", gcAlloc),
-	)
 	return c.evalReap(gcEval, gcAlloc)
 }
 

@@ -53,7 +53,6 @@ func MustNewURL(t *testing.T, s string) *url.URL {
 func FatalStack(t *testing.T, s string) {
 	stackTrace := make([]byte, 1024*1024)
 	n := runtime.Stack(stackTrace, true)
-	t.Errorf("---> Test failed: %s", s)
 	t.Error(string(stackTrace[:n]))
 	t.Fatal(s)
 }

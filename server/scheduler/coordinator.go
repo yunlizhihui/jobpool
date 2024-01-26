@@ -95,10 +95,6 @@ func (r *allocCoordinator) Compute(repository ScheduleRepository) (*domain.Node,
 			selectNodeId = k
 		}
 	}
-	r.logger.Debug("----reconciler--",
-		zap.String("selectedNode", selectNodeId),
-		zap.String("allocId", r.planAlloc.JobId),
-		zap.Int("minScore", minScore))
 	for _, node := range nodes {
 		if node.ID == selectNodeId {
 			return node, nil
@@ -106,9 +102,6 @@ func (r *allocCoordinator) Compute(repository ScheduleRepository) (*domain.Node,
 	}
 	// 无则随机
 	if len(nodes) > 1 {
-		r.logger.Debug("---reconciler--",
-			zap.String("method", "random"),
-			zap.Int("node size", len(nodes)))
 		// random
 		num := rand.Intn(len(nodes) - 1)
 		if num < len(nodes) && nodes[num] != nil {

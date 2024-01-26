@@ -49,7 +49,6 @@ func NewGenericScheduler(name string, logger *zap.Logger, repository ScheduleRep
 }
 
 func (s *GenericScheduler) Process(eval *domain.Evaluation) error {
-	s.logger.Debug("----in scheduler process-----", zap.String("trigger by", eval.TriggeredBy))
 	s.eval = eval
 	s.logger = s.logger.With(zap.String("eval_id", eval.ID), zap.String("plan_id", eval.PlanID), zap.String("namespace", eval.Namespace))
 	progress := func() bool { return progressResultReset(s.planResult) }
@@ -185,7 +184,6 @@ func (s *GenericScheduler) getJob() (bool, error) {
 func (s *GenericScheduler) processImpl() (bool, error) {
 	// Lookup the PlanAllocation by ID
 	var err error
-	s.logger.Debug("--start process impl---")
 	threeHourAgo := time.Now().Add(time.Hour * -3)
 	if constant.EvalStatusBlocked == s.eval.Status && s.eval.CreateTime.TimeValue().Before(threeHourAgo) {
 		// s.eval.Status = constant.EvalStatusCancelled
@@ -222,10 +220,7 @@ func (s *GenericScheduler) processImpl() (bool, error) {
 	// Create a planAlloc
 	s.planAlloc = makePlanAllocByEvalAndPlan(s.eval, s.plan, s.job)
 
-	// 开始计算评估信息
-	s.logger.Debug("--start computeJobAllocs in process impl---")
-
-	// Compute the target job allocations
+	// 开始计算评估信息	// Compute the target job allocations
 	if err := s.computeJobAllocs(); err != nil {
 		s.logger.Warn("failed to compute job allocations", zap.String("error", err.Error()))
 		return false, err
@@ -258,8 +253,6 @@ func (s *GenericScheduler) processImpl() (bool, error) {
 			s.logger.Debug("found reschedulable allocs, followup eval created", zap.String("followup_eval_id", eval.ID))
 		}
 	}
-	s.logger.Debug("--start SubmitPlan in process impl---")
-	s.logger.Debug("the alloc info", zap.Int("size", len(s.planAlloc.NodeAllocation)))
 	// Submit the plan and store the results.
 	result, err := s.planWorker.SubmitPlan(s.planAlloc)
 	s.planResult = result
