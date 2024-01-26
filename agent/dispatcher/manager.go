@@ -50,7 +50,6 @@ func (d *Dispatcher) allocSync() {
 			}
 
 			// Send to server.
-			d.logger.Debug("-----start run update alloc stauts ----", zap.Int("alloc", len(sync)))
 			for _, item := range sync {
 				d.logger.Info("the state is :", zap.String("allocId", item.ID), zap.String("state", item.ClientStatus))
 				// TODO 优化成一次请求

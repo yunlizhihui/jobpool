@@ -92,7 +92,6 @@ func (q *QueueOperator) EvalBrokerDequeue(r *pb.ScheduleEvalDequeueRequest) (res
 	var data *schedulepb.Evaluation
 	if eval != nil {
 		data = domain.ConvertEvaluation(eval)
-		q.logger.Debug("----------fetch the eval in dequeue------------", zap.String("eval-id", data.Id))
 	}
 	resp := &pb.ScheduleEvalDequeueResponse{
 		Data:   data,
@@ -132,9 +131,7 @@ func (q *QueueOperator) AllocationEnqueue(r *pb.PlanAllocationEnqueueRequest) (a
 	defer q.evalBroker.ResumeNackTimeout(evalId, token)
 	// Submit the plan to the queue
 	plan := domain.ConvertPlanAllocation(r)
-	q.logger.Debug("plan alloc Enqueue ------")
 	future, err := q.planQueue.Enqueue(plan)
-	q.logger.Debug("plan alloc Enqueue finished------")
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +140,6 @@ func (q *QueueOperator) AllocationEnqueue(r *pb.PlanAllocationEnqueueRequest) (a
 	if err != nil {
 		return nil, err
 	}
-	q.logger.Debug("plan alloc wait finished------")
 	var allocs []*schedulepb.Allocation
 	if result != nil {
 		if result.NodeAllocation != nil && len(result.NodeAllocation) > 0 {

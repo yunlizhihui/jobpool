@@ -56,7 +56,6 @@ func (d *Dispatcher) watchAllocations(updates chan *structs.AllocUpdates) {
 		}
 	}
 	// node注册成功后，开始进入监听状态，并处理对应的任务分配
-	d.logger.Debug("--watch allocations from server----")
 	req := &etcdserverpb.ScheduleAllocationListRequest{
 		NodeId: d.NodeID(),
 		Status: constant.AllocClientStatusPending,
@@ -144,8 +143,6 @@ OUTER:
 					continue
 				}
 				pulledAllocs[allocation.Id] = domain.ConvertAllocation(allocation)
-				d.logger.Debug("received the allocation----------",
-					zap.Reflect("allocation", allocation))
 			}
 			for _, desiredID := range pull {
 				if _, ok := pulledAllocs[desiredID]; !ok {
@@ -267,7 +264,6 @@ func (d *Dispatcher) addAlloc(alloc *domain.Allocation) error {
 }
 
 func (d *Dispatcher) updateAlloc(update *domain.Allocation) {
-	d.logger.Info("-----更新alloc的状态开始啦------")
 	ar, err := d.getAllocRunner(update.ID)
 	if err != nil {
 		d.logger.Warn("cannot update nonexistent alloc", zap.String("alloc_id", update.ID))

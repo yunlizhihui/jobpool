@@ -86,7 +86,6 @@ func (p *PeriodicDispatch) run(ctx context.Context, updateCh <-chan struct{}) {
 	var launchCh <-chan time.Time
 	select {
 	case <-p.dispatcher.ReadyNotify():
-		p.logger.Info("-------periodic wait for raft ready-------")
 	}
 	for p.isEnabled() {
 		plan, launch := p.nextLaunch()

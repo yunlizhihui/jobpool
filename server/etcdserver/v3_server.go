@@ -962,7 +962,6 @@ func (s *EtcdServer) EvalAdd(ctx context.Context, r *pb.ScheduleEvalAddRequest) 
 		if err := s.waitAppliedIndex(); err != nil {
 			return nil, err
 		}
-		s.Logger().Debug("start queue in leader -------")
 		resp, err := s.queueOperator.EvalBrokerQueue(eval)
 		if err != nil {
 			return nil, err
@@ -1020,7 +1019,6 @@ func (s *EtcdServer) EvalUpdate(ctx context.Context, r *pb.ScheduleEvalStatusUpd
 		if err := s.waitAppliedIndex(); err != nil {
 			return nil, err
 		}
-		s.Logger().Debug("start queue in leader -------")
 		_, err := s.queueOperator.EvalBrokerQueue(eval)
 		if err != nil {
 			return nil, err
@@ -1178,7 +1176,6 @@ func (s *EtcdServer) EvalDequeue(ctx context.Context, r *pb.ScheduleEvalDequeueR
 		if err := s.waitAppliedIndex(); err != nil {
 			return nil, err
 		}
-		s.Logger().Debug("start dequeue in leader -------")
 		resp, err := s.queueOperator.EvalBrokerDequeue(r)
 		if err != nil {
 			return nil, err
