@@ -31,7 +31,6 @@ const (
 
 // leaderLoop 仅在主节点上运行
 func (s *EtcdServer) leaderLoop(stopCh chan struct{}) {
-	s.Logger().Info("------ am i leader now?----", zap.Bool("is", s.isLeader()), zap.String("cluster", s.cluster.String()))
 RECONCILE:
 	if s.isLeader() {
 		if err := s.establishLeadership(stopCh); err != nil {

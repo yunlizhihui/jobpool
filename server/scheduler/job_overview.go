@@ -214,7 +214,6 @@ func (q *JobBirdEyeView) Stats(namespace string) *domain.JobMapStats {
 	stats.TotalUnUsed = q.getSlotLeft(namespace)
 
 	// 将队列中的内容打印出来
-	q.logger.Debug("-----in roadmap running queue-----")
 	listRunning := q.slotRunning[namespace]
 	runningJobs := make([]string, 0)
 	if listRunning != nil {
@@ -224,7 +223,6 @@ func (q *JobBirdEyeView) Stats(namespace string) *domain.JobMapStats {
 		}
 	}
 	stats.RunningJobs = runningJobs
-	q.logger.Debug("-----in roadmap pending queue-----")
 	listPending := q.slotPending[namespace]
 	pendingJobs := make([]string, 0)
 	if listPending != nil {
@@ -234,7 +232,6 @@ func (q *JobBirdEyeView) Stats(namespace string) *domain.JobMapStats {
 		}
 	}
 	stats.PendingJobs = pendingJobs
-	q.logger.Debug("-----in roadmap retry queue-----")
 	listRetry := q.slotRetry[namespace]
 	if listRetry != nil {
 		for _, item := range listRetry {

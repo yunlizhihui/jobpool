@@ -1616,7 +1616,6 @@ func (a *applierV3backend) NodeDetail(r *pb.NodeDetailRequest) (*pb.NodeDetailRe
 
 func (a *applierV3backend) PlanAllocationEnqueue(r *pb.PlanAllocationEnqueueRequest) (*pb.PlanAllocationEnqueueResponse, error) {
 	if a.s.isLeader() {
-		a.s.Logger().Info("plan alloc in leader ------")
 		if r.Allocations == nil {
 			return nil, fmt.Errorf("cannot submit nil plan allocation")
 		}
@@ -1628,9 +1627,7 @@ func (a *applierV3backend) PlanAllocationEnqueue(r *pb.PlanAllocationEnqueueRequ
 		defer a.s.evalBroker.ResumeNackTimeout(evalId, token)
 		// Submit the plan to the queue
 		plan := domain.ConvertPlanAllocation(r)
-		a.s.Logger().Info("plan alloc Enqueue ------")
 		future, err := a.s.allocationQueue.Enqueue(plan)
-		a.s.Logger().Info("plan alloc Enqueue finished------")
 		if err != nil {
 			return nil, err
 		}
@@ -1640,8 +1637,6 @@ func (a *applierV3backend) PlanAllocationEnqueue(r *pb.PlanAllocationEnqueueRequ
 		if err != nil {
 			return nil, err
 		}
-		a.s.Logger().Info("plan alloc wait finished------")
-
 		var allocs []*schedulepb.Allocation
 		if result.NodeAllocation != nil && len(result.NodeAllocation) > 0 {
 			// 后续拼装
@@ -1652,7 +1647,6 @@ func (a *applierV3backend) PlanAllocationEnqueue(r *pb.PlanAllocationEnqueueRequ
 			Data:   allocs,
 		}, nil
 	} else {
-		a.s.Logger().Info("plan alloc not in leader ------")
 		return &pb.PlanAllocationEnqueueResponse{
 			Header: newHeader(a.s),
 		}, nil

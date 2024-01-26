@@ -120,7 +120,6 @@ WAIT:
 	// Check if this is a SIGHUP
 	if sig == syscall.SIGHUP {
 		// c.handleReload()
-		c.Ui.Output("TODO reload config from file------")
 		goto WAIT
 	}
 

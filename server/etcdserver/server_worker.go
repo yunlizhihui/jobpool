@@ -137,7 +137,6 @@ func (w *Worker) Start() {
 
 func (w *Worker) run() {
 	// worker running
-	w.logger.Debug("----- the worker is running", zap.String("id", w.ID()))
 	defer func() {
 		w.markStopped()
 	}()
@@ -148,7 +147,6 @@ func (w *Worker) run() {
 		w.logger.Info("---------the server raft is ready----------")
 	}
 	for {
-		w.logger.Debug("in worker-------")
 		if !w.srv.cluster.IsReadyToAddVotingMember() {
 			time.Sleep(5 * time.Second)
 			retryTimes++
@@ -316,10 +314,7 @@ REQ:
 	// start := time.Now()
 	w.setWorkloadStatus(WorkloadWaitingToDequeue)
 
-	// 转发到leader节点，并从其队列中获取
-	w.logger.Debug("---start dequeue of eval in server---",
-		zap.Duration("timeout", timeout),
-		zap.Strings("schedulers", w.enabledSchedulers))
+	// 转发到leader节点，并从其队列中获取		zap.Strings("schedulers", w.enabledSchedulers))
 
 	r, err := w.srv.EvalDequeue(w.ctx, &etcdserverpb.ScheduleEvalDequeueRequest{
 		Timeout:    uint64(timeout.Milliseconds()),
@@ -359,7 +354,6 @@ REQ:
 	}
 	w.backoffReset()
 	if r != nil && r.Data != nil {
-		w.logger.Debug("------the plan item is---", zap.String("eval-id", r.Data.Id), zap.String("plan-id", r.Data.PlanId))
 		ev := convertEvalFromEvalucation(r.Data)
 		return ev, r.Token, 0, false
 	}

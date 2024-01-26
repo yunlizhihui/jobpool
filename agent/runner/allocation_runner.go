@@ -307,7 +307,6 @@ func (ar *allocRunner) Update(update *domain.Allocation) {
 }
 
 func (ar *allocRunner) RunSkipAllocation() string {
-	ar.logger.Debug("------the parameter is ", zap.String("desc", ar.alloc.ClientDescription))
 	err := ar.nervous.DispatchSkipJob(ar.alloc.PlanID, ar.alloc.JobId, []byte(ar.alloc.ClientDescription))
 	if err != nil {
 		ar.logger.Warn("dispatch skip job failed", zap.Error(err))
@@ -317,8 +316,6 @@ func (ar *allocRunner) RunSkipAllocation() string {
 }
 
 func (ar *allocRunner) RunFailAllocation() string {
-	ar.logger.Info("------the parameter is ", zap.String("desc", ar.alloc.ClientDescription))
-
 	err := ar.nervous.DispatchNoSlotJob(ar.alloc.PlanID, ar.alloc.JobId, []byte(ar.alloc.ClientDescription))
 	if err != nil {
 		ar.logger.Warn("dispatch failed job failed", zap.Error(err))

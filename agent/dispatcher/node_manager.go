@@ -111,14 +111,12 @@ func (d *Dispatcher) registerNode() error {
 		StatusUpdateAt:    now.UnixMicro(),
 		StartedAt:         timestamppb.TimestampNow(),
 	}
-	d.logger.Info("---start add node to server-----", zap.String("node", node.ID))
 	var resp *etcdserverpb.NodeAddResponse
 	resp, err := d.client.NodeAdd(d.ctx, &req)
 	if err != nil {
 		d.logger.Warn("Node.Register error", zap.Error(err))
 		return err
 	}
-	d.logger.Info("---finish add node to server-----", zap.Int64("beat ttl ms", resp.HeartbeatTtl))
 
 	// Update the node status to ready after we register.
 	d.configLock.Lock()
