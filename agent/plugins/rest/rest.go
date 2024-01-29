@@ -14,10 +14,12 @@ package rest
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	resty "github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
+	"net/http"
 	"strings"
 	"time"
 	"yunli.com/jobpool/agent/v2/plugins"
@@ -35,7 +37,11 @@ type Plugin struct {
 
 func NewPlugin(ctx context.Context, logger *zap.Logger) plugins.PluginRunner {
 	restClient := resty.New()
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	restClient.
+		SetTransport(tr).
 		// Set retry count to non zero to enable retries
 		SetRetryCount(3).
 		// You can override initial retry wait time.
