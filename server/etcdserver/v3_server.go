@@ -27,6 +27,7 @@ import (
 	"yunli.com/jobpool/api/v2/constant"
 	"yunli.com/jobpool/api/v2/domain"
 	pb "yunli.com/jobpool/api/v2/etcdserverpb"
+	"yunli.com/jobpool/api/v2/helper/cronutil"
 	"yunli.com/jobpool/api/v2/helper/ulid"
 	"yunli.com/jobpool/api/v2/membershippb"
 	"yunli.com/jobpool/api/v2/schedulepb"
@@ -143,6 +144,8 @@ type ScheduleService interface {
 	PlanAllocationEnqueue(ctx context.Context, r *pb.PlanAllocationEnqueueRequest, opts ...grpc.CallOption) (*pb.PlanAllocationEnqueueResponse, error)
 	QueueDetail(ctx context.Context, r *pb.QueueDetailRequest, opts ...grpc.CallOption) (*pb.QueueDetailResponse, error)
 	QueueJobViewDetail(ctx context.Context, r *pb.QueueJobViewRequest, opts ...grpc.CallOption) (*pb.QueueJobViewResponse, error)
+	QueueForbiddenUpdate(ctx context.Context, r *pb.QueueForbiddenRequest, opts ...grpc.CallOption) (*pb.QueueForbiddenResponse, error)
+	QueueStatusDetail(ctx context.Context, r *pb.QueueStatusRequest, opts ...grpc.CallOption) (*pb.QueueStatusResponse, error)
 }
 
 func (s *EtcdServer) Range(ctx context.Context, r *pb.RangeRequest) (*pb.RangeResponse, error) {
@@ -689,6 +692,14 @@ func (s *EtcdServer) PlanAdd(ctx context.Context, r *pb.SchedulePlanAddRequest) 
 	scheduleNameSpaceDetailRequest := &pb.ScheduleNameSpaceDetailRequest{
 		Name: r.Namespace,
 	}
+	// 校验cron是否正确
+	if r.Periodic != nil && r.Periodic.Spec != "" {
+		dtNow := time.Now()
+		_, err := cronutil.Next(r.Periodic.Spec, dtNow)
+		if err != nil {
+			return nil, domain.NewErr1010Format("Spec", r.Periodic.Spec)
+		}
+	}
 	_, err := s.raftRequest(ctx, pb.InternalRaftRequest{ScheduleNamespaceDetail: scheduleNameSpaceDetailRequest})
 	if err != nil {
 		return nil, err
@@ -707,6 +718,14 @@ func (s *EtcdServer) PlanAdd(ctx context.Context, r *pb.SchedulePlanAddRequest) 
 func (s *EtcdServer) PlanUpdate(ctx context.Context, r *pb.SchedulePlanUpdateRequest) (*pb.SchedulePlanUpdateResponse, error) {
 	scheduleNameSpaceDetailRequest := &pb.ScheduleNameSpaceDetailRequest{
 		Name: r.Namespace,
+	}
+	// 校验cron是否正确
+	if r.Periodic != nil && r.Periodic.Spec != "" {
+		dtNow := time.Now()
+		_, err := cronutil.Next(r.Periodic.Spec, dtNow)
+		if err != nil {
+			return nil, domain.NewErr1010Format("Spec", r.Periodic.Spec)
+		}
 	}
 	_, err := s.raftRequest(ctx, pb.InternalRaftRequest{ScheduleNamespaceDetail: scheduleNameSpaceDetailRequest})
 	if err != nil {
@@ -1515,6 +1534,90 @@ func (s *EtcdServer) QueueJobViewDetail(ctx context.Context, r *pb.QueueJobViewR
 	return nil, ErrCanceled
 }
 
+func (s *EtcdServer) QueueForbiddenUpdate(ctx context.Context, r *pb.QueueForbiddenRequest, opts ...grpc.CallOption) (*pb.QueueForbiddenResponse, error) {
+	if s.isLeader() {
+		err := s.revokeLeadership()
+		if err != nil {
+			return nil, err
+		}
+		data, err := s.queueOperator.QueueStatusDetail()
+		if err != nil {
+			return nil, err
+		}
+		return &pb.QueueForbiddenResponse{
+			Header: newHeader(s),
+			Data:   data,
+		}, nil
+	}
+	// I am a flower then request from leader
+	cctx, cancel := context.WithTimeout(ctx, s.Cfg.ReqTimeout())
+	defer cancel()
+	for cctx.Err() == nil {
+		leader, lerr := s.waitLeader(cctx)
+		if lerr != nil {
+			return nil, lerr
+		}
+		for _, url := range leader.PeerURLs {
+			lurl := url + schedulerhttp.QueueForbiddenPrefix
+			s.Logger().Debug("the request is ", zap.Reflect("request", r))
+			resp, err := schedulerhttp.QueueForbiddenUpdateHTTP(cctx, r, lurl, s.peerRt)
+			if resp != nil {
+				resp.Header = newHeader(s)
+			}
+			if err == nil || err == schedulerhttp.ErrScheduleNotFound {
+				return resp, err
+			}
+			s.Logger().Info("the err", zap.Error(err))
+		}
+		// Throttle in case of e.g. connection problems.
+		time.Sleep(50 * time.Millisecond)
+	}
+	if cctx.Err() == context.DeadlineExceeded {
+		return nil, ErrTimeout
+	}
+	return nil, ErrCanceled
+}
+
+func (s *EtcdServer) QueueStatusDetail(ctx context.Context, r *pb.QueueStatusRequest, opts ...grpc.CallOption) (*pb.QueueStatusResponse, error) {
+	if s.isLeader() {
+		data, err := s.queueOperator.QueueStatusDetail()
+		if err != nil {
+			return nil, err
+		}
+		return &pb.QueueStatusResponse{
+			Header: newHeader(s),
+			Data:   data,
+		}, nil
+	}
+	// I am a flower then request from leader
+	cctx, cancel := context.WithTimeout(ctx, s.Cfg.ReqTimeout())
+	defer cancel()
+	for cctx.Err() == nil {
+		leader, lerr := s.waitLeader(cctx)
+		if lerr != nil {
+			return nil, lerr
+		}
+		for _, url := range leader.PeerURLs {
+			lurl := url + schedulerhttp.QueueStatusPrefix
+			s.Logger().Debug("the request is ", zap.Reflect("request", r))
+			resp, err := schedulerhttp.QueueStatusDetailHTTP(cctx, r, lurl, s.peerRt)
+			if resp != nil {
+				resp.Header = newHeader(s)
+			}
+			if err == nil || err == schedulerhttp.ErrScheduleNotFound {
+				return resp, err
+			}
+			s.Logger().Info("the err", zap.Error(err))
+		}
+		// Throttle in case of e.g. connection problems.
+		time.Sleep(50 * time.Millisecond)
+	}
+	if cctx.Err() == context.DeadlineExceeded {
+		return nil, ErrTimeout
+	}
+	return nil, ErrCanceled
+}
+
 func (s *EtcdServer) raftRequestOnce(ctx context.Context, r pb.InternalRaftRequest) (proto.Message, error) {
 	result, err := s.processInternalRaftRequestOnce(ctx, r)
 	if err != nil {
@@ -1932,6 +2035,38 @@ func (s *EtcdServer) leaderPeriodicLoop() {
 			}
 		case <-s.stopping:
 			return
+		}
+	}
+}
+
+func (s *EtcdServer) holdLeaderQueueStatus() {
+	ticker := time.NewTicker(monitorQueueInterval)
+	defer ticker.Stop()
+	retryTimes := 0
+	for {
+		select {
+		case <-s.stopping:
+			return
+		case <-ticker.C:
+			// 每5秒钟检查一下是否leader，是否开启了队列
+			if s.isLeader() {
+				data, err := s.queueOperator.QueueStatusDetail()
+				if err != nil {
+					s.Logger().Error("failed to get queue status", zap.Error(err))
+					time.Sleep(5 * time.Second)
+					continue
+				}
+				if data.AllocationQueue == "off" || data.EvalBroker == "off" || data.BlockedEvals == "off" {
+					s.Logger().Warn("the jobpool queue status has some exception")
+					retryTimes++
+					time.Sleep(1 * time.Second)
+					if retryTimes >= 5 {
+						s.Logger().Info("i am a leader,repair the queue in my node, do something...")
+						s.leaderLoop(s.stopping)
+						retryTimes = 0
+					}
+				}
+			}
 		}
 	}
 }

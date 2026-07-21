@@ -16,8 +16,9 @@ GOOS=${GOOS:-$(go env GOOS)}
 GOARCH=${GOARCH:-$(go env GOARCH)}
 # -------------配置项（打正式镜像的时候写死）-------------
 # 注意：下面的配置可以强制要求按照linux和amd64去打包
-#GOOS=linux
-#GOARCH=amd64
+GOOS=linux
+GOARCH=amd64
+#GOARCH=arm64
 
 # Set GO_LDFLAGS="-s" for building without symbols for debugging.
 # shellcheck disable=SC2206

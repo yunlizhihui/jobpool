@@ -1395,6 +1395,7 @@ func (a *applierV3backend) AllocationUpdate(r *pb.ScheduleAllocationStatusUpdate
 				if alloc.ClientStatus == constant.AllocClientStatusComplete ||
 					alloc.ClientStatus == constant.AllocClientStatusFailed ||
 					alloc.ClientStatus == constant.AllocClientStatusCancelled ||
+					alloc.ClientStatus == constant.AllocClientStatusSkipped ||
 					alloc.ClientStatus == constant.AllocClientStatusExpired {
 					if err := a.s.jobBirdEye.DequeueJob(alloc.Namespace, alloc.JobId); err != nil {
 						a.s.Logger().Error("dequeue job in eye view failed", zap.String("jobId", alloc.JobId), zap.Error(err))

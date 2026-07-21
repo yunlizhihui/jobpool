@@ -343,3 +343,19 @@ func (as *ScheduleServer) QueueJobViewDetail(ctx context.Context, r *pb.QueueJob
 	}
 	return resp, nil
 }
+
+func (as *ScheduleServer) QueueForbiddenUpdate(ctx context.Context, r *pb.QueueForbiddenRequest) (*pb.QueueForbiddenResponse, error) {
+	resp, err := as.scheduleService.QueueForbiddenUpdate(ctx, r)
+	if err != nil {
+		return nil, togRPCError(err)
+	}
+	return resp, nil
+}
+
+func (as *ScheduleServer) QueueStatusDetail(ctx context.Context, r *pb.QueueStatusRequest) (*pb.QueueStatusResponse, error) {
+	resp, err := as.scheduleService.QueueStatusDetail(ctx, r)
+	if err != nil {
+		return nil, togRPCError(err)
+	}
+	return resp, nil
+}

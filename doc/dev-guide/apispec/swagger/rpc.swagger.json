@@ -2868,6 +2868,44 @@
         }
       }
     },
+    "/v3/schedule/queues/forbidden/{namespace}": {
+      "post": {
+        "tags": [
+          "Schedule"
+        ],
+        "operationId": "Schedule_QueueForbiddenUpdate",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "namespace",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/etcdserverpbQueueForbiddenRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/etcdserverpbQueueForbiddenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        }
+      }
+    },
     "/v3/schedule/queues/job/{namespace}": {
       "get": {
         "tags": [
@@ -2887,6 +2925,36 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/etcdserverpbQueueJobViewResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        }
+      }
+    },
+    "/v3/schedule/queues/status/{namespace}": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "operationId": "Schedule_QueueStatusDetail",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "namespace",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/etcdserverpbQueueStatusResponse"
             }
           },
           "default": {
@@ -4447,6 +4515,45 @@
         }
       }
     },
+    "etcdserverpbQueueEnableStats": {
+      "type": "object",
+      "properties": {
+        "allocationQueue": {
+          "type": "string"
+        },
+        "blockedEvals": {
+          "type": "string"
+        },
+        "evalBroker": {
+          "type": "string"
+        },
+        "jobBirdEye": {
+          "type": "string"
+        },
+        "periodicDispatcher": {
+          "type": "string"
+        }
+      }
+    },
+    "etcdserverpbQueueForbiddenRequest": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        }
+      }
+    },
+    "etcdserverpbQueueForbiddenResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/etcdserverpbQueueEnableStats"
+        },
+        "header": {
+          "$ref": "#/definitions/etcdserverpbResponseHeader"
+        }
+      }
+    },
     "etcdserverpbQueueJobStats": {
       "type": "object",
       "properties": {
@@ -4489,6 +4596,17 @@
       "properties": {
         "data": {
           "$ref": "#/definitions/etcdserverpbQueueJobStats"
+        },
+        "header": {
+          "$ref": "#/definitions/etcdserverpbResponseHeader"
+        }
+      }
+    },
+    "etcdserverpbQueueStatusResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/etcdserverpbQueueEnableStats"
         },
         "header": {
           "$ref": "#/definitions/etcdserverpbResponseHeader"

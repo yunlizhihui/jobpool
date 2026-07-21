@@ -34,7 +34,7 @@ import (
 
 const (
 	maxNoLeaderCnt          = 3
-	warnUnaryRequestLatency = 300 * time.Millisecond
+	warnUnaryRequestLatency = 500 * time.Millisecond
 	snapshotMethod          = "/etcdserverpb.Maintenance/Snapshot"
 )
 

@@ -649,6 +649,18 @@ service Schedule {
     };
   }
 
+  rpc QueueForbiddenUpdate(QueueForbiddenRequest) returns (QueueForbiddenResponse) {
+    option (google.api.http) = {
+      post: "/v3/schedule/queues/forbidden/{namespace}"
+      body: "*"
+    };
+  }
+  rpc QueueStatusDetail(QueueStatusRequest) returns (QueueStatusResponse) {
+    option (google.api.http) = {
+      get: "/v3/schedule/queues/status/{namespace}"
+    };
+  }
+
 }
 
 message ResponseHeader {
@@ -2010,5 +2022,27 @@ message QueueJobViewRequest {
 message QueueJobViewResponse{
   ResponseHeader header = 1;
   QueueJobStats data = 2;
+}
+message QueueForbiddenRequest {
+  string namespace = 1;
+}
+message QueueEnableStats {
+  string allocationQueue = 1;
+  string evalBroker = 2;
+  string blockedEvals = 3;
+  string jobBirdEye = 4;
+  string periodicDispatcher = 5;
+}
+message QueueForbiddenResponse{
+  ResponseHeader header = 1;
+  QueueEnableStats data = 2;
+}
+
+message QueueStatusRequest {
+  string namespace = 1;
+}
+message QueueStatusResponse{
+  ResponseHeader header = 1;
+  QueueEnableStats data = 2;
 }
 // === queue logic end ===

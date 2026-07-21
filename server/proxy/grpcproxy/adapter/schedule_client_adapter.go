@@ -170,3 +170,11 @@ func (s *scs2scc) QueueDetail(ctx context.Context, in *pb.QueueDetailRequest, op
 func (s *scs2scc) QueueJobViewDetail(ctx context.Context, in *pb.QueueJobViewRequest, opts ...grpc.CallOption) (*pb.QueueJobViewResponse, error) {
 	return s.as.QueueJobViewDetail(ctx, in)
 }
+
+func (s *scs2scc) QueueForbiddenUpdate(ctx context.Context, in *pb.QueueForbiddenRequest, opts ...grpc.CallOption) (*pb.QueueForbiddenResponse, error) {
+	return s.as.QueueForbiddenUpdate(ctx, in)
+}
+
+func (s *scs2scc) QueueStatusDetail(ctx context.Context, in *pb.QueueStatusRequest, opts ...grpc.CallOption) (*pb.QueueStatusResponse, error) {
+	return s.as.QueueStatusDetail(ctx, in)
+}

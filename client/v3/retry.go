@@ -470,6 +470,14 @@ func (rsc *retryScheduleClient) QueueJobViewDetail(ctx context.Context, in *pb.Q
 	return rsc.sch.QueueJobViewDetail(ctx, in, opts...)
 }
 
+func (rsc *retryScheduleClient) QueueForbiddenUpdate(ctx context.Context, in *pb.QueueForbiddenRequest, opts ...grpc.CallOption) (*pb.QueueForbiddenResponse, error) {
+	return rsc.sch.QueueForbiddenUpdate(ctx, in, opts...)
+}
+
+func (rsc *retryScheduleClient) QueueStatusDetail(ctx context.Context, in *pb.QueueStatusRequest, opts ...grpc.CallOption) (*pb.QueueStatusResponse, error) {
+	return rsc.sch.QueueStatusDetail(ctx, in, opts...)
+}
+
 func RetryScheduleClient(c *Client) pb.ScheduleClient {
 	return &retryScheduleClient{
 		sch: pb.NewScheduleClient(c.conn),

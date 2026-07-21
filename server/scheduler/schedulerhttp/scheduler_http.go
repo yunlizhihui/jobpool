@@ -34,7 +34,9 @@ var (
 	PlanAllocationAddPrefix  = "/schedule/plans/allocations/add"
 	QueueDetailPrefix        = "/schedule/queues/detail"
 	QueueJobViewDetailPrefix = "/schedule/queues/job/view/detail"
-	applyTimeout             = time.Second
+	QueueForbiddenPrefix     = "/schedule/queues/forbidden"
+	QueueStatusPrefix        = "/schedule/queues/status"
+	applyTimeout             = 5 * time.Second
 	ErrLeaseHTTPTimeout      = errors.New("waiting for node to catch up its applied index has timed out")
 	ErrScheduleNotFound      = errors.New("scheduler http not found")
 )
@@ -240,6 +242,59 @@ func (h *schedulerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	case QueueForbiddenPrefix:
+		lreq := pb.QueueForbiddenRequest{}
+		if lerr := lreq.Unmarshal(b); lerr != nil {
+			http.Error(w, "error unmarshalling request", http.StatusBadRequest)
+			return
+		}
+		select {
+		case <-h.waitch():
+		case <-time.After(applyTimeout):
+			http.Error(w, ErrLeaseHTTPTimeout.Error(), http.StatusRequestTimeout)
+			return
+		}
+		h.queueOperator.QueueForbidden()
+		data, err := h.queueOperator.QueueStatusDetail()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp := &pb.QueueForbiddenResponse{
+			Header: &pb.ResponseHeader{},
+			Data:   data,
+		}
+		v, err = resp.Marshal()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case QueueStatusPrefix:
+		lreq := pb.QueueStatusRequest{}
+		if lerr := lreq.Unmarshal(b); lerr != nil {
+			http.Error(w, "error unmarshalling request", http.StatusBadRequest)
+			return
+		}
+		select {
+		case <-h.waitch():
+		case <-time.After(applyTimeout):
+			http.Error(w, ErrLeaseHTTPTimeout.Error(), http.StatusRequestTimeout)
+			return
+		}
+		data, err := h.queueOperator.QueueStatusDetail()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp := &pb.QueueStatusResponse{
+			Header: &pb.ResponseHeader{},
+			Data:   data,
+		}
+		v, err = resp.Marshal()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	default:
 		http.Error(w, fmt.Sprintf("unknown request path %q", r.URL.Path), http.StatusBadRequest)
 		return
@@ -404,6 +459,44 @@ func QueueJobViewDetailHTTP(ctx context.Context, r *pb.QueueJobViewRequest, url 
 		return nil, err
 	}
 	lresp := &pb.QueueJobViewResponse{}
+	if err := lresp.Unmarshal(b); err != nil {
+		return nil, fmt.Errorf(`lease: %v. data = "%s"`, err, string(b))
+	}
+	return lresp, nil
+}
+
+func QueueForbiddenUpdateHTTP(ctx context.Context, r *pb.QueueForbiddenRequest, url string, rt http.RoundTripper) (*pb.QueueForbiddenResponse, error) {
+	// will post lreq protobuf to leader
+	lreq, err := (&pb.QueueForbiddenRequest{
+		Namespace: r.Namespace,
+	}).Marshal()
+	if err != nil {
+		return nil, err
+	}
+	b, err := doRequest(ctx, url, lreq, rt)
+	if err != nil {
+		return nil, err
+	}
+	lresp := &pb.QueueForbiddenResponse{}
+	if err := lresp.Unmarshal(b); err != nil {
+		return nil, fmt.Errorf(`lease: %v. data = "%s"`, err, string(b))
+	}
+	return lresp, nil
+}
+
+func QueueStatusDetailHTTP(ctx context.Context, r *pb.QueueStatusRequest, url string, rt http.RoundTripper) (*pb.QueueStatusResponse, error) {
+	// will post lreq protobuf to leader
+	lreq, err := (&pb.QueueStatusRequest{
+		Namespace: r.Namespace,
+	}).Marshal()
+	if err != nil {
+		return nil, err
+	}
+	b, err := doRequest(ctx, url, lreq, rt)
+	if err != nil {
+		return nil, err
+	}
+	lresp := &pb.QueueStatusResponse{}
 	if err := lresp.Unmarshal(b); err != nil {
 		return nil, fmt.Errorf(`lease: %v. data = "%s"`, err, string(b))
 	}

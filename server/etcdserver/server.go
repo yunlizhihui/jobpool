@@ -848,6 +848,7 @@ func (s *EtcdServer) Start() {
 	s.GoAttach(s.monitorVersions)
 	s.GoAttach(s.linearizableReadLoop)
 	s.GoAttach(s.leaderPeriodicLoop)
+	s.GoAttach(s.holdLeaderQueueStatus)
 	s.GoAttach(s.monitorKVHash)
 	s.GoAttach(s.monitorCompactHash)
 	s.GoAttach(s.monitorDowngrade)

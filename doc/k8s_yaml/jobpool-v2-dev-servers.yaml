@@ -127,7 +127,7 @@ spec:
         - name: aliyun
       containers:
         - name: jobpool2
-          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:2.0.1-SNAPSHOT.x86_64
+          image: registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:2.0.2-SNAPSHOT.x86_64
           imagePullPolicy: Always
           resources:
             limits:

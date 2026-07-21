@@ -14,7 +14,11 @@ import (
 	ulid "yunli.com/jobpool/pkg/v2/ulid"
 )
 
-const DefaultMaxFetchNodeTimes = 10
+const (
+	DefaultMaxFetchNodeTimes = 10
+	DefaultMaxSkipJobTimes   = 5
+	DefaultMaxPendingSeconds = 60 * 60
+)
 
 const (
 	ReasonFailedNoSlot = "无槽位，任务失败"
@@ -30,7 +34,11 @@ func (s *EtcdServer) DispatchPlan(plan *domain.Plan) (*schedulepb.Evaluation, er
 		err := s.failPlanForNoSlot(plan)
 		return nil, err
 	}
-	job, err := s.createJobByPeriodic(plan, constant.JobStatusPending, "")
+	jobInitStatus := constant.JobStatusPending
+	if plan.Synchronous {
+		jobInitStatus = constant.JobStatusComplete
+	}
+	job, err := s.createJobByPeriodic(plan, jobInitStatus, "")
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +55,18 @@ func (s *EtcdServer) DispatchPlan(plan *domain.Plan) (*schedulepb.Evaluation, er
 	}
 	evalResponse, err := s.EvalAdd(s.ctx, eval)
 	if err != nil {
-		s.Logger().Error("add eval error in dispatch logic", zap.String("job-id", job.Id))
+		// 写入job成功但是写入eval或者队列不成功，这个需要补偿机制
+		// 2024年8月12日
+		s.Logger().Error("add eval error in dispatch logic", zap.String("job-id", job.Id), zap.Error(err))
+		s.Logger().Info("start update job from pending to failed", zap.String("job-id", job.Id))
+		_, upErr := s.JobUpdate(s.ctx, &pb.ScheduleJobStatusUpdateRequest{
+			Id:          job.Id,
+			Status:      constant.JobStatusFailed,
+			Description: "the job can't create eval or can't enqueue",
+		})
+		if upErr != nil {
+			s.Logger().Error("update job status error, the job will pending all the time", zap.String("job-id", job.Id))
+		}
 		return nil, err
 	}
 	return evalResponse.Data, nil
@@ -125,6 +144,8 @@ func (s *EtcdServer) SkipPlan(plan *domain.Plan) error {
 	// create the skip allocation to run in the dispatcher
 	if !plan.Synchronous {
 		go s.createSkipAllocation(plan, jobResponse.Id)
+		// 2024年8月23日 离线任务，跳过次数有限制，连续[5次]跳过或pending超过[1小时]则直接失败该任务
+		go s.checkAndRepairHistoryJob(plan)
 	}
 	s.Logger().Debug("skip the job with plugin", zap.String("job-id", jobResponse.Id))
 	return nil
@@ -182,6 +203,68 @@ func (s *EtcdServer) createSkipAllocation(plan *domain.Plan, jobId string) error
 		return err
 	}
 	return nil
+}
+
+// 检查是否有异常的任务，尝试修复跳过
+func (s *EtcdServer) checkAndRepairHistoryJob(plan *domain.Plan) error {
+	unNormalJob := &pb.ScheduleJobListRequest{
+		PlanId:     plan.ID,
+		Namespace:  plan.Namespace,
+		PageNumber: 1,
+		PageSize:   50,
+	}
+	jobs, err := s.JobList(s.ctx, unNormalJob)
+	if err != nil {
+		return err
+	}
+	skipTimes := 0
+	latestPendingJobTime := xtime.NewFormatTime(time.Now())
+	pendingHourAgo := time.Now().Add(time.Second * -1 * DefaultMaxPendingSeconds)
+	var pendingJob *domain.Job
+	for _, job := range jobs.Data {
+		if constant.JobStatusSkipped == job.Status {
+			skipTimes++
+		} else {
+			if constant.JobStatusPending == job.Status {
+				pendingJob = domain.ConvertJob(job)
+				latestPendingJobTime = pendingJob.CreateTime
+			}
+			break
+		}
+	}
+	// 达成下面任意条件，以后就不能跳过了
+	shouldRepair := false
+	repairReason := ""
+	if skipTimes >= DefaultMaxSkipJobTimes {
+		shouldRepair = true
+		repairReason = fmt.Sprintf("该任务导致%d个任务跳过", DefaultMaxSkipJobTimes)
+	}
+	if latestPendingJobTime.TimeValue().Before(pendingHourAgo) {
+		shouldRepair = true
+		repairReason = fmt.Sprintf("该任务已经等资源%d秒，影响后续任务运行", DefaultMaxPendingSeconds)
+	}
+	if !shouldRepair {
+		return nil
+	}
+	if pendingJob == nil {
+		// shikp过来的，需要找到那个pending
+		for _, job := range jobs.Data {
+			if constant.JobStatusPending == job.Status {
+				pendingJob = domain.ConvertJob(job)
+			}
+		}
+		if pendingJob == nil {
+			s.logger.Warn("试图将pending的任务设置失败，但是没找到pending的任务", zap.String("plan-id", plan.ID), zap.String("plan-name", plan.Name))
+			return nil
+		}
+	}
+	jobUpdateReq := &pb.ScheduleJobStatusUpdateRequest{
+		Id:          pendingJob.ID,
+		Status:      constant.JobStatusFailed,
+		Description: repairReason,
+	}
+	_, err = s.JobUpdate(s.ctx, jobUpdateReq)
+	return err
 }
 
 // createFailedAllocation 创建一个失败的alloc因为没有槽位导致

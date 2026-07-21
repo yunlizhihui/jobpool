@@ -75,6 +75,8 @@ func newPeerHandler(
 		mux.Handle(schedulerhttp.PlanAllocationAddPrefix, schedulerHandler)
 		mux.Handle(schedulerhttp.QueueDetailPrefix, schedulerHandler)
 		mux.Handle(schedulerhttp.QueueJobViewDetailPrefix, schedulerHandler)
+		mux.Handle(schedulerhttp.QueueForbiddenPrefix, schedulerHandler)
+		mux.Handle(schedulerhttp.QueueStatusPrefix, schedulerHandler)
 	}
 	if downgradeEnabledHandler != nil {
 		mux.Handle(etcdserver.DowngradeEnabledPath, downgradeEnabledHandler)

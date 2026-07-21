@@ -173,7 +173,7 @@ func (p *PeriodicDispatch) dispatch(plan *domain.Plan, launchTime time.Time) {
 			return
 		}
 		p.logger.Debug("in periodic has  running", zap.Bool("runn", running))
-		if running {
+		if running && !plan.Synchronous {
 			// 创建job和task，状态均为跳过
 			p.logger.Debug("skipping launch of periodic Plan because Plan prohibits overlap", zap.String("Plan", plan.NamespacedID().String()))
 			p.l.Unlock()

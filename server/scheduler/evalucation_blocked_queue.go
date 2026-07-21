@@ -87,6 +87,12 @@ type wrappedEval struct {
 	token string
 }
 
+func (b *BlockedEvals) Enabled() bool {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	return b.enabled
+}
+
 // SetEnabled is used to control if the blocked eval tracker is enabled. The
 // tracker should only be enabled on the active leader.
 func (b *BlockedEvals) SetEnabled(enabled bool) {

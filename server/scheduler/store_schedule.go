@@ -597,6 +597,9 @@ func checkNameSpaceFormat(name string) bool {
 		if c == '_' {
 			continue
 		}
+		if c == '-' {
+			continue
+		}
 		return true
 	}
 	return false

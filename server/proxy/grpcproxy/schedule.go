@@ -213,3 +213,13 @@ func (s *ScheduleProxy) QueueJobViewDetail(ctx context.Context, r *pb.QueueJobVi
 	conn := s.client.ActiveConnection()
 	return pb.NewScheduleClient(conn).QueueJobViewDetail(ctx, r)
 }
+
+func (s *ScheduleProxy) QueueForbiddenUpdate(ctx context.Context, r *pb.QueueForbiddenRequest) (*pb.QueueForbiddenResponse, error) {
+	conn := s.client.ActiveConnection()
+	return pb.NewScheduleClient(conn).QueueForbiddenUpdate(ctx, r)
+}
+
+func (s *ScheduleProxy) QueueStatusDetail(ctx context.Context, r *pb.QueueStatusRequest) (*pb.QueueStatusResponse, error) {
+	conn := s.client.ActiveConnection()
+	return pb.NewScheduleClient(conn).QueueStatusDetail(ctx, r)
+}

@@ -1,4 +1,4 @@
-FROM alpine
+FROM registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:base-agent-img.arm
 
 ADD jobpool_agent /usr/local/bin/
 ADD jobpoolctl /usr/local/bin/

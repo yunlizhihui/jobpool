@@ -42,6 +42,11 @@ type QueueService interface {
 	QueueJobViewStats(namespace string) (detail *pb.QueueJobStats, err error)
 }
 
+const (
+	STATUS_ON  = "on"
+	STATUS_OFF = "off"
+)
+
 type QueueOperator struct {
 	evalBroker   *scheduler.EvalBroker
 	planQueue    *scheduler.AllocationQueue
@@ -182,4 +187,37 @@ func (q *QueueOperator) QueueJobViewStats(namespace string) (detail *pb.QueueJob
 		RunningJobs: stats.RunningJobs,
 		PendingJobs: stats.PendingJobs,
 	}, nil
+}
+
+func (q *QueueOperator) QueueForbidden() {
+	// 设置队列不可用
+	q.evalBroker.SetEnabled(false)
+	q.blockedEvals.SetEnabled(false)
+	q.planQueue.SetEnabled(false)
+	q.jobBirdEye.SetEnabled(false)
+}
+
+func (q *QueueOperator) QueueStatusDetail() (detail *pb.QueueEnableStats, err error) {
+	queueStatus := &pb.QueueEnableStats{}
+	if q.planQueue.Enabled() {
+		queueStatus.AllocationQueue = STATUS_ON
+	} else {
+		queueStatus.AllocationQueue = STATUS_OFF
+	}
+	if q.evalBroker.Enabled() {
+		queueStatus.EvalBroker = STATUS_ON
+	} else {
+		queueStatus.EvalBroker = STATUS_OFF
+	}
+	if q.blockedEvals.Enabled() {
+		queueStatus.BlockedEvals = STATUS_ON
+	} else {
+		queueStatus.BlockedEvals = STATUS_OFF
+	}
+	if q.jobBirdEye.Enabled() {
+		queueStatus.JobBirdEye = STATUS_ON
+	} else {
+		queueStatus.JobBirdEye = STATUS_OFF
+	}
+	return queueStatus, nil
 }

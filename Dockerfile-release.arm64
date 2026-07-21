@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 gcr.io/distroless/static-debian11
+FROM registry.cn-beijing.aliyuncs.com/yunli-data-platform/jobpool-v2:base-img.arm
 
 ADD jobpool.sh /usr/local/bin/
 ADD jobpool /usr/local/bin/

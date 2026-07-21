@@ -97,6 +97,12 @@ type unackEval struct {
 
 type PendingEvaluations []*domain.Evaluation
 
+func (b *EvalBroker) Enabled() bool {
+	b.l.RLock()
+	defer b.l.RUnlock()
+	return b.enabled
+}
+
 func (b *EvalBroker) SetEnabled(enabled bool) {
 	b.l.Lock()
 	defer b.l.Unlock()

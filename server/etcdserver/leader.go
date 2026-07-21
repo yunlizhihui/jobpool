@@ -27,6 +27,7 @@ import (
 const (
 	// failedEvalUnblockInterval 重新进入调度器的时间间隔
 	failedEvalUnblockInterval = 1 * time.Minute
+	monitorQueueInterval      = 5 * time.Second
 )
 
 // leaderLoop 仅在主节点上运行
