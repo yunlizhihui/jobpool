@@ -31,3 +31,6 @@ jobpoolctl/vendor
 api/vendor
 agent/vendor
 agent/agent
+doc/claude
+.omc
+CLAUDE.md

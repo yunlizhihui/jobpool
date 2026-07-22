@@ -331,10 +331,8 @@ OUTER:
 		if len(nodes) > 0 {
 			if len(nodes) > 1 {
 				// 随机
-				num := rand.Intn(len(nodes) - 1)
-				if num < len(nodes) && nodes[num] != nil {
-					nodeId = nodes[num].ID
-				}
+				num := rand.Intn(len(nodes))
+				nodeId = nodes[num].ID
 			}
 			// 取第一个
 			if nodeId == "" {

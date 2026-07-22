@@ -14,11 +14,12 @@ UNAME := $(shell uname)
 XARGS = xargs
 ARCH ?= $(shell go env GOARCH)
 #FINAL_TAG = 2.0.2-SNAPSHOT.x86_64
-FINAL_TAG = GA-2.0.2.x86_64
+FINAL_TAG = GA-2.2.0.x86_64
 # -------------配置项（打正式镜像的时候写死）-------------
 # 注意：下面的配置将决定你使用什么名称去打包镜像
 # 改为amd64 可以在arm机器上直接打包出x86_64的镜像
 ARCH = amd64
+#ARCH = arm64
 #FINAL_TAG = 2.1.0-SNAPSHOT.x86_64
 
 # -r is only necessary on GNU xargs.

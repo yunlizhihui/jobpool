@@ -347,7 +347,7 @@ func (as *scheduleStore) Recover(be backend.Backend) {
 	as.be = be
 	tx := be.ReadTx()
 	tx.Lock()
-	as.setRevision(getRevision(tx))
+	as.setRevision(getScheduleRevision(tx))
 	// as.refreshRangePermCache(tx)
 
 	tx.Unlock()
@@ -743,15 +743,13 @@ func (as *scheduleStore) LaunchUpsert(id string, namespace string, launch time.T
 	tx.LockInsideApply()
 	defer tx.Unlock()
 	exist := getLaunchById(as.lg, tx, id, namespace)
-	if exist != nil {
-		exist.Launch, _ = timestamppb.TimestampProto(launch)
-	} else {
-		exist := &schedulepb.Launch{
+	if exist == nil {
+		exist = &schedulepb.Launch{
 			Id:        id,
 			Namespace: namespace,
 		}
-		exist.Launch, _ = timestamppb.TimestampProto(launch)
 	}
+	exist.Launch, _ = timestamppb.TimestampProto(launch)
 	putLaunch(as.lg, tx, exist)
 	as.commitRevision(tx)
 	as.lg.Debug("added a launch", zap.String("launch-id", id))

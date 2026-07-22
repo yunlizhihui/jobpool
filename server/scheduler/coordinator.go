@@ -101,12 +101,9 @@ func (r *allocCoordinator) Compute(repository ScheduleRepository) (*domain.Node,
 		}
 	}
 	// 无则随机
-	if len(nodes) > 1 {
-		// random
-		num := rand.Intn(len(nodes) - 1)
-		if num < len(nodes) && nodes[num] != nil {
-			return nodes[num], nil
-		}
+	if len(nodes) > 0 {
+		num := rand.Intn(len(nodes))
+		return nodes[num], nil
 	}
 	return nil, domain.NewErr1004Invalid("节点", "满足调度规则要求")
 }
